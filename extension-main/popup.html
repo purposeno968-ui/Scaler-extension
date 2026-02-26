@@ -6,6 +6,7 @@
     <title>Scaler++</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
+
   <body>
     <div class="popup-container">
       <!-- Header -->
@@ -36,11 +37,38 @@
                   Bypass companion-mode while Joining classes
                 </span>
               </div>
+
               <div class="toggle-switch">
                 <input type="checkbox" id="toggle-companion-bypass" checked />
                 <span class="slider"></span>
               </div>
             </label>
+
+            <!-- Calendar Sync toggle -->
+            <div class="toggle-item highlight" style="align-items: flex-start; cursor: default;">
+              
+              <div class="toggle-info" style="gap: 10px;">
+                <label for="toggle-calendar-sync" style="cursor: pointer; display: flex; flex-direction: column; gap: 2px;">
+                  <span class="toggle-title">📅 Calendar Sync</span>
+                  <span class="toggle-desc">
+                    Auto-add classes to Google Calendar every 24 hours
+                  </span>
+                </label>
+                
+                <div id="calendar-sync-options" style="display: none;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <button id="syncCalendarBtn" class="sync-btn">Sync Now</button>
+                    <span id="syncStatus" class="sync-status"></span>
+                  </div>
+                </div>
+              </div>
+              
+              <label class="toggle-switch" for="toggle-calendar-sync" style="margin-top: 4px; cursor: pointer;">
+                <input type="checkbox" id="toggle-calendar-sync" checked />
+                <span class="slider"></span>
+              </label>
+
+            </div>
 
             <label class="toggle-item highlight">
               <div class="toggle-info">

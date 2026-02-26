@@ -123,6 +123,7 @@ extension-main/
 │   ├── background.js        ← Service worker entry point (importScripts only)
 │   ├── companionBypass.js   ← Smart Companion Bypass logic
 │   ├── leetcodeLink.js      ← LeetCode search & verification
+    ├── calendarSync.js      ← Sync classes directly into Google Calendar
 │   └── videoTracker.js      ← M3U8 stream capture & download initiation
 └── content/
     ├── content.js           ← Entry point & message handler
@@ -146,6 +147,26 @@ extension-main/
 ---
 
 ## 📝 Changelog
+
+### v1.9.0 📅 Google Calendar Sync
+
+Automatically adds your upcoming Scaler classes directly to your Google
+Calendar — no manual entry needed.
+
+- **🔄 Rolling 7-Day Window** — Fetches and syncs the next 7 days of classes
+  every time a sync runs, so your calendar always stays a week ahead.
+- **⏰ Daily Auto-Sync** — A background alarm fires once every 24 hours to
+  pick up any newly scheduled or rescheduled classes without you lifting a
+  finger.
+- **🚫 No Duplicates** — Before adding any class, the sync checks your
+  calendar first. If the event already exists it skips it — running Sync Now
+  multiple times is completely safe.
+- **🎛️ Toggle Control** — Enable or disable from the popup. Turning it OFF
+  clears the background alarm entirely so zero API calls are made while
+  disabled.
+- **🚀 Sync Now** — A manual button appears beneath the toggle for an
+  on-demand sync whenever you need it, even if auto-sync is already on.
+- **🌐 Cross-Browser** — Works on Chrome, Brave, Edge, and Arc.
 
 ### v1.8.0 📝 AI Lecture Transcription Edition
 
