@@ -36,6 +36,7 @@ const DEFAULT_SETTINGS = {
   "companion-bypass": true,
   "subject-sort": true,
   "video-downloader": true,
+  "calendar-sync": true,
   "mess-fee-filled-timestamp": null,
 
   // Assignment
@@ -67,6 +68,7 @@ const TOGGLE_MAP = {
   "toggle-companion": "companion",
   "toggle-subject-sort": "subject-sort",
   "toggle-video-downloader": "video-downloader",
+  "toggle-calendar-sync": "calendar-sync",
 };
 
 // Current settings state
@@ -85,13 +87,7 @@ async function loadSettings() {
       const toggle = document.getElementById(toggleId);
       if (toggle) {
         toggle.checked = currentSettings[settingKey] !== false;
-
-        // Special handling for practice mode options visibility
-        if (settingKey === "practice-mode") {
-          const optionsDiv = document.getElementById("practice-mode-options");
-          if (optionsDiv)
-            optionsDiv.style.display = toggle.checked ? "block" : "none";
-        }
+        _syncSubOptions(settingKey, toggle.checked);
       }
     });
 
@@ -133,6 +129,21 @@ async function handleToggleChange(toggleId, settingKey) {
         currentSettings["practice-mode-start"] = null;
       }
     }
+
+    if (settingKey === "calendar-sync") {
+      // Notify the background service worker so it can create or
+      // destroy the 12-hour alarm.  The background also fires an
+      // immediate (non-interactive) sync when the toggle is turned on
+      // for the first time so the user sees instant feedback.
+      chrome.runtime.sendMessage(
+        { action: "CALENDAR_SYNC_TOGGLED", enabled: newValue },
+        () => {
+          /* response handled by background */
+        },
+      );
+    }
+
+    _syncSubOptions(settingKey, newValue);
 
     // Save to Chrome storage immediately
     await chrome.storage.sync.set({ cleanerSettings: currentSettings });
@@ -176,6 +187,29 @@ async function handleToggleChange(toggleId, settingKey) {
   }
 }
 
+// ─── Sub-option Visibility ───────────────────────────────────
+
+/**
+ * Show or hide a toggle's companion sub-option panel.
+ * Both the practice-mode options and the calendar-sync options
+ * follow the same pattern.
+ *
+ * @param {string}  settingKey - The parent toggle's settings key
+ * @param {boolean} visible    - Whether the parent toggle is ON
+ */
+function _syncSubOptions(settingKey, visible) {
+  const panelIds = {
+    "practice-mode": "practice-mode-options",
+    "calendar-sync": "calendar-sync-options",
+  };
+
+  const panelId = panelIds[settingKey];
+  if (!panelId) return;
+
+  const panel = document.getElementById(panelId);
+  if (panel) panel.style.display = visible ? "block" : "none";
+}
+
 /**
  * Reset all settings to default
  */
@@ -191,6 +225,7 @@ async function resetSettings() {
       const toggle = document.getElementById(toggleId);
       if (toggle) {
         toggle.checked = DEFAULT_SETTINGS[settingKey];
+        _syncSubOptions(settingKey, DEFAULT_SETTINGS[settingKey]);
       }
     });
 
@@ -304,6 +339,37 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // ── Calendar Sync — "Sync Now" button ────────────────────
+  document.getElementById("syncCalendarBtn")?.addEventListener("click", () => {
+    const statusEl = document.getElementById("syncStatus");
+    const btn = document.getElementById("syncCalendarBtn");
+
+    // Disable the button and show an in-progress message while
+    // waiting for the background to complete the sync
+    btn.disabled = true;
+    statusEl.textContent = "Syncing…";
+    statusEl.className = "sync-status syncing";
+
+    chrome.runtime.sendMessage({ action: "SYNC_CALENDAR" }, (response) => {
+      btn.disabled = false;
+
+      if (response?.success) {
+        statusEl.textContent = "✓ Classes added to Calendar";
+        statusEl.className = "sync-status success";
+      } else {
+        const reason = response?.error ?? "Unknown error";
+        statusEl.textContent = `✗ Sync failed: ${reason}`;
+        statusEl.className = "sync-status error";
+      }
+
+      // Clear the status message after a few seconds
+      setTimeout(() => {
+        statusEl.textContent = "";
+        statusEl.className = "sync-status";
+      }, 5000);
+    });
+  });
 
   // Add hover effect for toggle items
   document.querySelectorAll(".toggle-item").forEach((item) => {

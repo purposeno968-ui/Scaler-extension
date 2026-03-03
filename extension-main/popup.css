@@ -279,6 +279,52 @@ body {
   font-weight: 500;
 }
 
+/* Calendar Sync — sub-option row layout */
+.calendar-sync-row {
+  align-items: center;
+  gap: 10px;
+}
+
+/* "Sync Now" button inside the calendar-sync sub-options panel */
+.sync-btn {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+.sync-btn:hover {
+  background: var(--primary-hover);
+}
+
+.sync-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Status text shown next to the Sync Now button */
+.sync-status {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex: 1;
+  min-width: 0;           /* allow text to truncate inside flex container */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.2s ease;
+}
+
+.sync-status.syncing { color: var(--text-secondary); }
+.sync-status.success { color: var(--accent);          }
+.sync-status.error   { color: var(--error);           }
+
 .days-input {
   width: 54px;
   background: var(--bg-tertiary);

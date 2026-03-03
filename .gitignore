@@ -10,3 +10,7 @@ Thumbs.db
 tmp/
 out/
 build/
+
+
+#Config
+config.js
