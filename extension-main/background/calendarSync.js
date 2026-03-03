@@ -175,7 +175,7 @@ async function _getOAuthToken(isInteractive) {
     }
   }
   // ── Attempt 2: launchWebAuthFlow (all Chromium browsers) ──
-  const CLIENT_ID = SCALER_PLUS_CONFIG.WEB_OAUTH_CLIENT_ID;
+  const CLIENT_ID = chrome.runtime.getManifest().oauth2.client_id;
   const redirectUrl = chrome.identity.getRedirectURL();
 
   const authUrl =
