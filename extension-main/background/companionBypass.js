@@ -87,7 +87,7 @@ async function activateCompanionBypass() {
       removeRuleIds: BYPASS_RULE_IDS,
     });
     await chrome.declarativeNetRequest.updateDynamicRules({ addRules: rules });
-    console.log("[Scaler++ Bypass] Rules activated with IP:", ip);
+    // console.log("[Scaler++ Bypass] Rules activated with IP:", ip);
   } catch (e) {
     console.error("[Scaler++ Bypass] Failed to activate rules:", e);
   }
@@ -101,9 +101,6 @@ async function deactivateCompanionBypass() {
     await chrome.declarativeNetRequest.updateDynamicRules({
       removeRuleIds: BYPASS_RULE_IDS,
     });
-    console.log(
-      "[Scaler++ Bypass] Rules deactivated — browser back to normal.",
-    );
   } catch (e) {
     console.error("[Scaler++ Bypass] Failed to deactivate rules:", e);
   }
@@ -149,9 +146,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     const bypassEnabled = settings["companion-bypass"] !== false; // default ON
 
     if (bypassEnabled) {
-      console.log(
-        "[Scaler++ Bypass] Join session detected — activating bypass.",
-      );
+      // console.log("[Scaler++ Bypass] Join session detected — activating bypass.");
       await triggerBypass();
     }
   } catch (e) {
