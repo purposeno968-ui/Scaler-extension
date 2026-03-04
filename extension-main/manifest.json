@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Scaler++",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Bypass companion-mode on campus WiFi, download lecture recordings, get LeetCode links on assignments & declutter Scaler dashboard",
   "permissions": [
     "storage",
