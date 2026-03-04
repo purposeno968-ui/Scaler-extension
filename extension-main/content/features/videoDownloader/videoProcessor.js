@@ -350,7 +350,7 @@ startBtn.addEventListener("click", async () => {
 
       // Initialize Transcriber (Checks Lemonfox API availability)
       statusText.innerText = "Phase 2/3: Initializing Whisper AI...";
-      const transcriber = new WhisperTranscriber(log);
+      const transcriber = new AudioTranscriber(log);
       await transcriber.init();
 
       // ── Reset progress bar for Phase 3 ──

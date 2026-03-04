@@ -1,44 +1,34 @@
 // ============================================================
-// whisperTranscriber.js
+// audioTranscriber.js
 // Uses Lemonfox API for transcription
 // ============================================================
 
-class WhisperTranscriber {
+class AudioTranscriber {
   constructor(logFn) {
     this.log = logFn || (() => {});
   }
 
   /**
-   * Initialize transcriber. Checks if Lemonfox API is active.
+   * Initialize transcriber. Checks if Backend API is active.
    */
   async init() {
-    this.log("Checking Lemonfox API availability...");
+    this.log("Checking Backend API availability...");
     try {
-      const formData = new FormData();
-      formData.append("model", "whisper-1");
-      const res = await fetch(
-        "https://api.lemonfox.ai/v1/audio/transcriptions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: "Bearer CMnBqrBbm2GdlE98IUSU3ZjUHUnYBsqX",
-          },
-          body: formData,
-        },
-      );
+      const res = await fetch("http://localhost:3000/", {
+        method: "GET",
+      });
 
-      // 400 Bad Request indicates API key is valid but file is missing (expected ping response)
-      if (res.status !== 401 && res.status !== 403 && res.status < 500) {
+      if (res.ok) {
         this.log(
-          "✅ Lemonfox API is active. Will use remote API for fast transcription.",
+          "✅ Backend API is active. Will use remote API for fast transcription.",
         );
         return;
       }
     } catch (e) {
-      this.log(`⚠ Lemonfox ping failed: ${e.message}`);
-      throw new Error("Lemonfox API is unavailable");
+      this.log(`⚠ Backend ping failed: ${e.message}`);
+      throw new Error("Backend API is unavailable");
     }
-    throw new Error("Lemonfox API is unavailable");
+    throw new Error("Backend API is unavailable");
   }
 
   // ── Anti-hallucination helpers ──
@@ -104,16 +94,14 @@ class WhisperTranscriber {
       formData.append("model", "whisper-1");
 
       try {
-        const response = await fetch(
-          "https://api.lemonfox.ai/v1/audio/transcriptions",
-          {
-            method: "POST",
-            headers: {
-              Authorization: "Bearer CMnBqrBbm2GdlE98IUSU3ZjUHUnYBsqX",
-            },
-            body: formData,
+        const response = await fetch("http://localhost:3000/api/transcribe", {
+          method: "POST",
+          headers: {
+            Authorization:
+              "Bearer Ritesh-Prajapati-created-started-this-extension-super-secret-key-12345",
           },
-        );
+          body: formData,
+        });
 
         if (!response.ok) {
           const errText = await response.text();

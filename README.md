@@ -104,7 +104,7 @@ extension-main/
     │   │   ├── videoDownloader.js    ← Button injection & recording detection
     │   │   ├── videoProcessor.html   ← Download/transcript progress UI
     │   │   ├── videoProcessor.js     ← Concurrent HLS downloader engine
-    │   │   ├── whisperTranscriber.js ← Local Whisper AI transcription engine
+    │   │   ├── audioTranscriber.js ← Local Whisper AI transcription engine
     │   │   ├── transformers.min.js   ← Bundled Transformers.js (HuggingFace)
     │   │   ├── ort-*.wasm/mjs        ← ONNX Runtime WASM backend files
     │   │   ├── tsAudioExtractor.js   ← Pure-JS MPEG-TS audio demuxer

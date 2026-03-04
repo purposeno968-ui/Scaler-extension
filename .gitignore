@@ -16,3 +16,6 @@ build/
 config.js
 
 addons/
+node_modules/
+package-lock.json
+.env
