@@ -14,7 +14,8 @@ class AudioTranscriber {
   async init() {
     this.log("Checking Backend API availability...");
     try {
-      const res = await fetch("http://localhost:3000/", {
+      // For testing use http://localhost:3000/
+      const res = await fetch("https://scalerbackend.vercel.app/", {
         method: "GET",
       });
 
@@ -94,14 +95,18 @@ class AudioTranscriber {
       formData.append("model", "whisper-1");
 
       try {
-        const response = await fetch("http://localhost:3000/api/transcribe", {
-          method: "POST",
-          headers: {
-            Authorization:
-              "Bearer Ritesh-Prajapati-created-started-this-extension-super-secret-key-12345",
+        const response = await fetch(
+          // For testing use http://localhost:3000/api/transcribe
+          "https://scalerbackend.vercel.app/api/transcribe",
+          {
+            method: "POST",
+            headers: {
+              Authorization:
+                "Bearer Ritesh-Prajapati-created-started-this-extension-super-secret-key-12345",
+            },
+            body: formData,
           },
-          body: formData,
-        });
+        );
 
         if (!response.ok) {
           const errText = await response.text();
