@@ -312,6 +312,24 @@ document.addEventListener("DOMContentLoaded", () => {
     resetBtn.addEventListener("click", resetSettings);
   }
 
+  const rateBtn = document.getElementById("rate-btn");
+  if (rateBtn) {
+    rateBtn.addEventListener("click", () => {
+      chrome.tabs.create({
+        url: "https://chromewebstore.google.com/detail/scaler++/fpnleckmeeahiognlpphbadchogfjgcg",
+      });
+    });
+  }
+
+  const feedbackBtn = document.getElementById("feedback-btn");
+  if (feedbackBtn) {
+    feedbackBtn.addEventListener("click", () => {
+      chrome.tabs.create({
+        url: "https://docs.google.com/forms/d/e/1FAIpQLScBQg_MLdb3H8FXQKDGFeGhzynLvDuF9528voMW16JzVDZXbQ/viewform?usp=dialog",
+      });
+    });
+  }
+
   // GitHub button handler
   const githubBtn = document.getElementById("github-btn");
   if (githubBtn) {
