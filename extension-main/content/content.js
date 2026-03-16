@@ -134,6 +134,9 @@ window.addEventListener("load", async () => {
 
   // Initialize Contest Leaderboard on contest pages
   setTimeout(initContestLeaderboard, 2000);
+
+  // Initialize custom message checking
+  setTimeout(initCustomMessages, 1000);
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
