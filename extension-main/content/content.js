@@ -44,6 +44,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       } else {
         removeSearchBar();
       }
+    } else if (key === "problem-picker") {
+      if (value) {
+        initProblemPicker();
+      } else {
+        const btn = document.querySelector(".scaler-pick-random-btn");
+        if (btn) btn.remove();
+      }
     } else if (key === "practice-mode") {
       if (value) {
         handlePracticeMode();
@@ -137,6 +144,9 @@ window.addEventListener("load", async () => {
 
   // Initialize custom message checking
   setTimeout(initCustomMessages, 1000);
+
+  // Initialize Problem Picker
+  setTimeout(initProblemPicker, 1500);
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -147,6 +157,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Initialize problems search if on problems page
   setTimeout(initProblemsSearch, 1000);
+
+  // Initialize Problem Picker
+  setTimeout(initProblemPicker, 1200);
 });
 
 // ============================================
@@ -187,4 +200,7 @@ handleUrlChange = function () {
   if (isContestPage()) {
     setTimeout(initContestLeaderboard, 2000);
   }
+
+  // Re-initialize Problem Picker on dashboard
+  setTimeout(initProblemPicker, 1500);
 };

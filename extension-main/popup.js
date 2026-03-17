@@ -29,6 +29,7 @@ const DEFAULT_SETTINGS = {
   "core-curriculum": true,
   "problem-search": true,
   "leetcode-link": true,
+  "problem-picker": true,
   "practice-mode": false,
   "practice-mode-days": 7,
   "practice-mode-start": null,
@@ -64,6 +65,7 @@ const TOGGLE_MAP = {
   "toggle-sidebar-refer-banner": "sidebar-refer-banner",
   "toggle-core-curriculum": "core-curriculum",
   "toggle-problem-search": "problem-search",
+  "toggle-problem-picker": "problem-picker",
   "toggle-leetcode-link": "leetcode-link",
   "toggle-practice-mode": "practice-mode",
   "toggle-join-session": "join-session",
@@ -170,6 +172,7 @@ async function handleToggleChange(toggleId, settingKey) {
     const isEnhancement = [
       "core-curriculum",
       "problem-search",
+      "problem-picker",
       "leetcode-link",
       "practice-mode",
       "join-session",

@@ -33,6 +33,7 @@ const DEFAULT_SETTINGS = {
   "core-curriculum": true,
   "problem-search": true,
   "leetcode-link": true,
+  "problem-picker": true,
   "practice-mode": false,
   "practice-mode-days": 7,
   "practice-mode-start": null,
