@@ -7,7 +7,7 @@
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "fetchCustomMessages") {
     // You can update this URL when deploying to production
-    fetch("http://localhost:3001/api/messages/active")
+    fetch("https://scalerbackend.vercel.app/api/messages/active")
       .then((res) => res.json())
       .then((data) => {
         sendResponse(data);

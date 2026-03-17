@@ -6,7 +6,6 @@
   "permissions": [
     "storage",
     "declarativeNetRequest",
-    "declarativeNetRequestWithHostAccess",
     "webRequest",
     "identity",
     "alarms"
@@ -15,12 +14,9 @@
     "https://leetcode.com/*",
     "https://www.google.com/*",
     "*://scaler.com/*",
-    "*://www.scaler.com/*",
     "*://*.scaler.com/*",
-    "https://www.scaler.com/academy/mentee/events/*",
     "https://www.googleapis.com/calendar/*",
-    "https://scalerbackend.vercel.app/*",
-    "http://localhost:3000/*"
+    "https://scalerbackend.vercel.app/*"
   ],
   "oauth2": {
     "client_id": "240142215084-so5ckgh5al2d6aipa0fg9bsokt2gdp61.apps.googleusercontent.com",
@@ -74,10 +70,6 @@
   "web_accessible_resources": [
     {
       "resources": ["icons/leetcode_icon.png"],
-      "matches": ["https://www.scaler.com/*", "https://scaler.com/*"]
-    },
-    {
-      "resources": ["content/features/videoDownloader/*"],
       "matches": ["https://www.scaler.com/*", "https://scaler.com/*"]
     }
   ],
