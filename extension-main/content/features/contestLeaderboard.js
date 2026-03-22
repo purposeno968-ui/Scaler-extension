@@ -111,34 +111,58 @@ async function enableContestLeaderboard() {
   // Skip if already processed
   if (container.dataset.scalerLeaderboardInjected === "true") return;
 
-  // Extract contest ID
-  const contestId = extractContestId();
-  if (!contestId) {
-    console.warn("[Scaler++] Could not extract contest ID from URL");
-    return;
-  }
+  // Guard against concurrent fetches triggered by rapid DOM mutations
+  if (_leaderboardFetchInProgress) return;
+  _leaderboardFetchInProgress = true;
 
-  // Fetch alias
-  const alias = await fetchContestAlias(contestId);
-  if (!alias) {
-    console.warn("[Scaler++] Could not fetch contest alias for ID:", contestId);
-    return;
-  }
+  try {
+    // Extract contest ID
+    const contestId = extractContestId();
+    if (!contestId) {
+      console.warn("[Scaler++] Could not extract contest ID from URL");
+      return;
+    }
 
-  // Inject the enabled leaderboard link
-  injectLeaderboardLink(container, alias);
-  console.log(`[Scaler++] Leaderboard enabled → /contest/${alias}/scoreboard`);
+    // Fetch alias
+    const alias = await fetchContestAlias(contestId);
+    if (!alias) {
+      console.warn("[Scaler++] Could not fetch contest alias for ID:", contestId);
+      return;
+    }
+
+    // Inject the enabled leaderboard link
+    injectLeaderboardLink(container, alias);
+    console.log(`[Scaler++] Leaderboard enabled → /contest/${alias}/scoreboard`);
+  } finally {
+    _leaderboardFetchInProgress = false;
+  }
 }
+
+let _leaderboardFetchInProgress = false;
 
 function observeForLeaderboard() {
   if (window._leaderboardObserver) return; // Already watching
 
+  let _leaderboardDebounceTimer = null;
+
   const observer = new MutationObserver(() => {
     if (currentSettings["contest-leaderboard"] === false) return;
-    enableContestLeaderboard();
+    // Debounce: don't fire a fetch on every individual DOM mutation.
+    clearTimeout(_leaderboardDebounceTimer);
+    _leaderboardDebounceTimer = setTimeout(() => {
+      if (!_leaderboardFetchInProgress) {
+        enableContestLeaderboard();
+      }
+    }, 300);
   });
 
-  observer.observe(document.body, { childList: true, subtree: true });
+  // Scope to the contest page content if possible, fall back to body.
+  const contestRoot =
+    document.querySelector(".classroom-contest") ||
+    document.querySelector(".cr-stats-container") ||
+    document.body;
+
+  observer.observe(contestRoot, { childList: true, subtree: true });
   window._leaderboardObserver = observer;
 }
 

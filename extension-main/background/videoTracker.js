@@ -19,7 +19,9 @@ chrome.webRequest.onCompleted.addListener(
       }
     }
   },
-  { urls: ["*://*/*"] }, // Broad capture for media streams
+  // Scoped to scaler.com only — was "*://*/*" which captured ALL network
+  // requests across every tab the user had open.
+  { urls: ["*://*.scaler.com/*"] },
 );
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {

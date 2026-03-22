@@ -9,6 +9,9 @@
 function setupModalObserver() {
   if (modalObserverSetup) return;
 
+  // Debounce timer to batch rapid modal-related mutations.
+  let _modalDebounceTimer = null;
+
   const observer = new MutationObserver((mutations) => {
     let shouldCheck = false;
 
@@ -25,38 +28,26 @@ function setupModalObserver() {
           }
         }
       });
-
-      // Check for class changes on modals (visibility changes)
-      if (
-        mutation.type === "attributes" &&
-        mutation.attributeName === "class"
-      ) {
-        const target = mutation.target;
-        if (
-          target.classList?.contains("sr-modal") ||
-          target.classList?.contains("ug-referral-popup-modal")
-        ) {
-          shouldCheck = true;
-        }
-      }
     });
 
     if (shouldCheck) {
-      // Small delay to let modal fully render
-      setTimeout(() => {
+      // Debounce to let the modal fully render before acting
+      clearTimeout(_modalDebounceTimer);
+      _modalDebounceTimer = setTimeout(() => {
         hideReferralPopup();
         if (shouldHide("auto-close-modals")) {
           autoCloseReferralModals();
         }
-      }, 100);
+      }, 150);
     }
   });
 
+  // childList + subtree is enough: we only need to know when modal
+  // nodes are *added* to the DOM. Watching attributes on every element
+  // is expensive and not needed here.
   observer.observe(document.body, {
     childList: true,
     subtree: true,
-    attributes: true,
-    attributeFilter: ["class", "style"],
   });
 
   modalObserverSetup = true;

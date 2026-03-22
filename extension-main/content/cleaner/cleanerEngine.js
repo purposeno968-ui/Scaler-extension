@@ -402,11 +402,22 @@ function cleanupAssignment() {
 }
 
 /**
- * Run all cleanup tasks
+ * Run all cleanup tasks.
+ * Uses a 5-second settings cache to avoid hammering chrome.storage.sync
+ * when called many times in quick succession (e.g. from MutationObservers).
  */
+let _lastSettingsLoadTime = 0;
+const SETTINGS_CACHE_TTL_MS = 5000;
+
 async function runCleanup() {
   if (!isExtensionValid()) return;
-  await loadSettings();
+
+  const now = Date.now();
+  if (now - _lastSettingsLoadTime > SETTINGS_CACHE_TTL_MS) {
+    await loadSettings();
+    _lastSettingsLoadTime = now;
+  }
+
   injectStyles();
   cleanupGlobal();
   cleanupTodosPage();

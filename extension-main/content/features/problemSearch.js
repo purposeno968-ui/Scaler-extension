@@ -283,22 +283,27 @@ function setupSearchListeners() {
       deactivateSearchMode();
     }
   });
+}
 
-  // Global "/" key to focus search
-  document.addEventListener("keydown", (e) => {
-    // Skip if already in an input field
-    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
-      return;
-    }
+// Global "/" key to focus search — registered ONCE at module load.
+// Keeping this outside setupSearchListeners() prevents listener
+// stacking when the search bar is torn down and re-created on navigation.
+document.addEventListener("keydown", (e) => {
+  // Skip if already in an input field
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
+    return;
+  }
 
-    // "/" key to focus search
-    if (e.key === "/" && isProblemsPage()) {
+  // "/" key to focus search
+  if (e.key === "/" && isProblemsPage()) {
+    const searchInput = document.getElementById("scaler-search-input");
+    if (searchInput) {
       e.preventDefault();
       activateSearchMode();
       searchInput.focus();
     }
-  });
-}
+  }
+});
 
 /**
  * Activate search mode - switch to All Problems tab
@@ -438,7 +443,7 @@ function filterProblems(query) {
 /**
  * Initialize problems search feature
  */
-function initProblemsSearch() {
+function initProblemsSearch(retries = 0) {
   if (!isProblemsPage()) {
     // Clean up if navigated away
     removeSearchBar();
@@ -455,9 +460,11 @@ function initProblemsSearch() {
   // Try to inject search bar
   injectSearchBar();
 
-  // Retry if not injected (page might still be loading)
-  if (!searchBarInjected) {
-    setTimeout(initProblemsSearch, 1000);
+  // Retry if not injected (page might still be loading).
+  // Cap at 8 retries (~8 seconds) to avoid an infinite loop if the
+  // problems page never renders the expected container.
+  if (!searchBarInjected && retries < 8) {
+    setTimeout(() => initProblemsSearch(retries + 1), 1000);
   }
 }
 

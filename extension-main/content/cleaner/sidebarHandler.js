@@ -6,14 +6,18 @@
 /**
  * Setup observer to watch for sidebar open/close
  */
-function setupSidebarObserver() {
+function setupSidebarObserver(retries = 0) {
   if (sidebarObserverSetup) return;
 
   const sidebarContainer = document.querySelector(
     ".ug-sidebar.sidebar.mentee-sidebar",
   );
   if (!sidebarContainer) {
-    setTimeout(setupSidebarObserver, 1000);
+    // Give up after 10 attempts (~10 seconds) to prevent an infinite
+    // retry chain on pages where the sidebar never renders.
+    if (retries < 10) {
+      setTimeout(() => setupSidebarObserver(retries + 1), 1000);
+    }
     return;
   }
 

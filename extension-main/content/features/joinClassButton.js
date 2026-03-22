@@ -230,11 +230,22 @@ function injectJoinSessionButtons() {
 function observeDashboardForClassCards() {
   if (window._joinSessionObserver) return; // already watching
 
+  // Debounce: collapse rapid DOM mutation bursts into one evaluation.
+  let _joinDebounceTimer = null;
+
   const observer = new MutationObserver(() => {
-    injectJoinSessionButtons();
+    clearTimeout(_joinDebounceTimer);
+    _joinDebounceTimer = setTimeout(injectJoinSessionButtons, 200);
   });
 
-  observer.observe(document.body, { childList: true, subtree: true });
+  // Scope to the dashboard content area if available, fall back to body.
+  // Narrowing the scope dramatically reduces how often the observer fires.
+  const dashboardRoot =
+    document.querySelector(".mentee-dashboard__content") ||
+    document.querySelector(".mentee-dashboard") ||
+    document.body;
+
+  observer.observe(dashboardRoot, { childList: true, subtree: true });
   window._joinSessionObserver = observer;
 }
 
