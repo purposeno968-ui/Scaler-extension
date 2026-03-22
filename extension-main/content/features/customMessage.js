@@ -91,6 +91,64 @@ function injectCustomMessage(msgData, dismissedIds) {
       links.forEach((link) => {
         link.addEventListener("click", markAsDismissed);
       });
+
+      // ── Wire up interactive buttons ────────────────────
+      // Any <button> with data-action-endpoint will be treated
+      // as an interactive action button.
+      const actionButtons = msgContainer.querySelectorAll(
+        "button[data-action-endpoint]",
+      );
+
+      actionButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const endpoint = btn.dataset.actionEndpoint;
+          const method = btn.dataset.actionMethod || "POST";
+          let body = null;
+
+          try {
+            body = btn.dataset.actionPayload
+              ? JSON.parse(btn.dataset.actionPayload)
+              : null;
+          } catch (e) {
+            console.error("Scaler++: Invalid JSON in data-action-payload", e);
+          }
+
+          // Disable button to prevent double-clicks
+          btn.disabled = true;
+          btn.style.opacity = "0.6";
+
+          chrome.runtime.sendMessage(
+            {
+              action: "proxyButtonClick",
+              endpoint,
+              method,
+              body,
+            },
+            (response) => {
+              if (chrome.runtime.lastError) {
+                console.error(
+                  "Scaler++: Error proxying button click",
+                  chrome.runtime.lastError,
+                );
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                return;
+              }
+
+              console.log("Scaler++: Button action response", response);
+
+              // Re-enable in case user wants to click again
+              btn.disabled = false;
+              btn.style.opacity = "1";
+
+              // Dismiss the message if the button asks for it
+              if (btn.hasAttribute("data-action-dismiss")) {
+                markAsDismissed();
+              }
+            },
+          );
+        });
+      });
     }
   }, 500);
 

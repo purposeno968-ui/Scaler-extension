@@ -147,6 +147,9 @@ window.addEventListener("load", async () => {
 
   // Initialize Problem Picker
   setTimeout(initProblemPicker, 1500);
+
+  // Track username from header
+  setTimeout(initUsernameTracker, 1500);
 });
 
 document.addEventListener("DOMContentLoaded", async () => {

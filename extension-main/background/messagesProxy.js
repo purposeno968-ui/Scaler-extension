@@ -4,10 +4,14 @@
 // fetch request from the background service worker context.
 // ============================================================
 
+// Base URL for the backend API (toggle for dev / prod)
+// const BACKEND_BASE_URL = "https://scalerbackend.vercel.app";
+const BACKEND_BASE_URL = "http://localhost:3001";
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // ── Fetch custom messages ────────────────────────────────
   if (message.action === "fetchCustomMessages") {
-    // You can update this URL when deploying to production
-    fetch("https://scalerbackend.vercel.app/api/messages/active")
+    fetch(`${BACKEND_BASE_URL}/api/messages/active`)
       .then((res) => res.json())
       .then((data) => {
         sendResponse(data);
@@ -18,6 +22,58 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
 
     // Return true to indicate we wish to send a response asynchronously
+    return true;
+  }
+
+  // ── Sync user profile to backend ─────────────────────────
+  if (message.action === "syncUserProfile") {
+    fetch(`${BACKEND_BASE_URL}/api/messages/sync-user`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(message.user),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        sendResponse({ success: true, data });
+      })
+      .catch((error) => {
+        // Shh... fail silently as per user request
+        sendResponse({ success: false, error: error.toString() });
+      });
+
+    return true;
+  }
+
+  // ── Proxy button click to backend ────────────────────────
+  // Content scripts can't make cross-origin requests to our
+  // backend, so we relay them through the service worker.
+  // message shape:
+  //   { action: "proxyButtonClick", endpoint: "/api/messages/button-click",
+  //     method: "POST", body: { ... } }
+  if (message.action === "proxyButtonClick") {
+    const url = `${BACKEND_BASE_URL}${message.endpoint}`;
+    const method = (message.method || "POST").toUpperCase();
+
+    const fetchOptions = {
+      method,
+      headers: { "Content-Type": "application/json" },
+    };
+
+    // Only attach a body for methods that support one
+    if (method !== "GET" && method !== "HEAD" && message.body) {
+      fetchOptions.body = JSON.stringify(message.body);
+    }
+
+    fetch(url, fetchOptions)
+      .then((res) => res.json())
+      .then((data) => {
+        sendResponse({ success: true, data });
+      })
+      .catch((error) => {
+        console.error("Scaler++: Error proxying button click", error);
+        sendResponse({ success: false, error: error.toString() });
+      });
+
     return true;
   }
 });
