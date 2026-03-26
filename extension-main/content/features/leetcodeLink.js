@@ -10,7 +10,8 @@ const LEETCODE_GRAPHQL_URL = "https://leetcode.com/graphql";
  */
 function isAssignmentProblemPage() {
   return (
-    location.pathname.includes("/assignment/problems/") &&
+    (location.pathname.includes("/assignment/problems/") ||
+      location.pathname.includes("/homework/problems")) &&
     location.pathname.match(/\/problems\/\d+/)
   );
 }

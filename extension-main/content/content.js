@@ -3,7 +3,7 @@
 // All logic is split across:
 //   cleaner/  → selectors, cleanerEngine, modalHandler, sidebarHandler
 //   core/     → settings, styleInjector, urlObserver
-//   features/ → problemSearch, practiceMode, leetcodeLink, joinClassButton
+//   features/ → problemSearch, practiceMode, leetcodeLink, joinClassButton, spotlightSearch
 //   utils/    → domUtils, stringUtils
 // ============================================
 
@@ -108,6 +108,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           window._leaderboardObserver = null;
         }
       }
+    } else if (key === "spotlight-search") {
+      if (!value && typeof closeSpotlight === "function") {
+        closeSpotlight();
+      }
     } else {
       updateVisibilityForKey(key, value);
     }
@@ -150,6 +154,9 @@ window.addEventListener("load", async () => {
 
   // Track username from header
   setTimeout(initUsernameTracker, 1500);
+
+  // Initialize Spotlight Search (Ctrl+Space)
+  if (typeof initSpotlightSearch === "function") initSpotlightSearch();
 });
 
 document.addEventListener("DOMContentLoaded", async () => {

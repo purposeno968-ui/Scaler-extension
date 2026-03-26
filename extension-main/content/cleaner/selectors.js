@@ -45,6 +45,9 @@ const DEFAULT_SETTINGS = {
 
   // Contest
   "contest-leaderboard": true,
+
+  // Spotlight Search
+  "spotlight-search": true,
 };
 
 // Elements config for /academy/mentee-dashboard/todos page

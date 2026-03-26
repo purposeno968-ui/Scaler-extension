@@ -45,6 +45,9 @@ const DEFAULT_SETTINGS = {
 
   // Assignment
   companion: true,
+
+  // Spotlight Search
+  "spotlight-search": true,
 };
 
 // All toggle IDs mapped to their setting keys
@@ -75,6 +78,7 @@ const TOGGLE_MAP = {
   "toggle-video-downloader": "video-downloader",
   "toggle-calendar-sync": "calendar-sync",
   "toggle-contest-leaderboard": "contest-leaderboard",
+  "toggle-spotlight-search": "spotlight-search",
 };
 
 // Current settings state
@@ -180,6 +184,7 @@ async function handleToggleChange(toggleId, settingKey) {
       "subject-sort",
       "video-downloader",
       "contest-leaderboard",
+      "spotlight-search",
     ].includes(settingKey);
     if (isEnhancement) {
       showToast(newValue ? "Enabled ✓" : "Disabled ✓", "success");

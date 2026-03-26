@@ -49,6 +49,10 @@ Search from all the problems instantly by name, topic, type, or day.
 
 Always shows a clickable "View Leaderboard" link on contest pages, even during active contests when it's normally disabled.
 
+## 🔍 Global Spotlight Search
+
+Press **`Option / Alt + Space`** to open a floating Apple-style search bar. Instantly find and jump to **Classes**, **Problems**, or **Events** from anywhere on Scaler.
+
 ## 🧹 CLEANER DASHBOARD
 
 ### 🌍 Global Elements (All Pages)
@@ -110,7 +114,7 @@ extension-main/
     │   │   ├── videoProcessor.js     ← Concurrent HLS downloader engine
     │   │   ├── audioTranscriber.js   ← Lemonfox API transcription engine
     │   │   └── modeBadge.js          ← Audio/Video/Transcript mode badge
-    │   ├── problemSearch, practiceMode, leetcodeLink,
+    │   ├── problemSearch, practiceMode, leetcodeLink, spotlightSearch,
     │   │   joinClassButton, companionBypass, subjectSort, contestLeaderboard
     └── utils/               ← domUtils, stringUtils
 ```
