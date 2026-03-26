@@ -398,31 +398,8 @@ startBtn.addEventListener("click", async () => {
 
     // ── AUDIO / VIDEO MODE ──
     const ext = downloadType === "audio" ? "aac" : "mp4";
-    statusText.innerText = "Choose where to save the file...";
-
-    let fileHandle;
-    try {
-      fileHandle = await window.showSaveFilePicker({
-        suggestedName: `Scaler_Lecture.${ext}`,
-        types: [
-          {
-            description: downloadType === "audio" ? "Audio File" : "Video File",
-            accept:
-              downloadType === "audio"
-                ? { "audio/aac": [".aac", ".m4a"] }
-                : { "video/mp4": [".mp4", ".ts"] },
-          },
-        ],
-      });
-    } catch (err) {
-      log("File selection cancelled.");
-      startBtn.disabled = false;
-      statusText.innerText = "Ready to download.";
-      return;
-    }
-
-    // Open writable stream to disk
-    const writable = await fileHandle.createWritable();
+    const mimeType = downloadType === "audio" ? "audio/aac" : "video/mp4";
+    const startTime = Date.now();
 
     // Prepare audio extractor if needed
     let audioExtractor = null;
@@ -431,17 +408,75 @@ startBtn.addEventListener("click", async () => {
       log("Audio extractor initialized — stripping video from each chunk.");
     }
 
-    // Download concurrently!
-    const startTime = Date.now();
+    // ── Try File System Access API (Chrome, Edge) ──
+    // Brave blocks showSaveFilePicker by default → fall back to Blob download
+    const supportsFilePicker =
+      typeof window.showSaveFilePicker === "function" &&
+      !navigator.brave; // navigator.brave is set on Brave browser
+
+    if (supportsFilePicker) {
+      statusText.innerText = "Choose where to save the file...";
+      let fileHandle;
+      try {
+        fileHandle = await window.showSaveFilePicker({
+          suggestedName: `Scaler_Lecture.${ext}`,
+          types: [
+            {
+              description:
+                downloadType === "audio" ? "Audio File" : "Video File",
+              accept:
+                downloadType === "audio"
+                  ? { "audio/aac": [".aac", ".m4a"] }
+                  : { "video/mp4": [".mp4", ".ts"] },
+            },
+          ],
+        });
+      } catch (err) {
+        // User dismissed the picker — don't treat as an error
+        if (err.name === "AbortError") {
+          log("File selection cancelled.");
+          startBtn.disabled = false;
+          statusText.innerText = "Ready to download.";
+          return;
+        }
+        // Any other error (e.g. Brave blocking it at runtime) → fall through to Blob
+        log("Save picker unavailable — switching to direct download...");
+      }
+
+      if (fileHandle) {
+        // Streaming write directly to disk
+        const writable = await fileHandle.createWritable();
+        statusText.innerText = `Downloading ${downloadType} (${CONCURRENCY}x parallel)...`;
+        await downloadConcurrently(segments, writable, audioExtractor);
+        await writable.close();
+
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        log(`✅ Download finished in ${elapsed}s!`);
+        statusText.innerText = `🎉 Download Complete! (${elapsed}s)`;
+        progressBar.style.background = "#28a745";
+        return;
+      }
+    }
+
+    // ── Fallback: Download to memory → Blob URL (Brave / Firefox / any browser) ──
+    log("Using in-memory download (compatible with all browsers)...");
     statusText.innerText = `Downloading ${downloadType} (${CONCURRENCY}x parallel)...`;
 
-    await downloadConcurrently(segments, writable, audioExtractor);
-
-    // Finalize
-    await writable.close();
+    // Reuse downloadToMemory (already handles audio extraction + progress UI)
+    const memBuffer = await downloadToMemory(segments, audioExtractor);
+    const blob = new Blob([memBuffer], { type: mimeType });
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = `Scaler_Lecture.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    // Delay revoke so the browser has time to start the download
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    log(`✅ Download finished in ${elapsed}s!`);
+    log(`✅ Download triggered in ${elapsed}s! Check your Downloads folder.`);
     statusText.innerText = `🎉 Download Complete! (${elapsed}s)`;
     progressBar.style.background = "#28a745";
   } catch (err) {

@@ -258,106 +258,126 @@ function addCoreCurriculumIconLink() {
 function injectMessFeeCheckbox() {
   const cards = document.querySelectorAll("a.mentee-card");
   cards.forEach((card) => {
-    if (card.textContent.includes("Mess Fee")) {
-      // Check the current filled status first and strictly enforce visibility BEFORE the injection bypass
-      const filledTimestamp = currentSettings["mess-fee-filled-timestamp"];
-      let isFilled = false;
+    if (!card.textContent.includes("Mess Fee")) return;
 
-      if (filledTimestamp) {
-        const daysSince =
-          (Date.now() - new Date(filledTimestamp).getTime()) /
-          (1000 * 60 * 60 * 24);
+    // ── Visibility gate ────────────────────────────────────────────────────
+    // Show the card ONLY when Scaler's own "Click here" typeform button is
+    // present in the DOM.  When the submission window is closed (or hasn't
+    // opened yet) Scaler removes that button, so we hide the whole card.
+    //
+    // Because browsers break nested <a> tags out of the parent anchor, the
+    // typeform link won't be found inside `card` itself — we check the
+    // parent container, which holds both the card anchor and the action panel.
+    const searchRoot = card.parentElement || card;
+    const typeformBtn = searchRoot.querySelector('a[href*="typeform"]');
 
-        if (daysSince <= 12) {
-          isFilled = true;
-          // Forcefully hide the component if it's already filled, to survive React re-renders
-          card.classList.add(HIDDEN_CLASS);
-        } else {
-          // It's stale, remove it
-          delete currentSettings["mess-fee-filled-timestamp"];
-          if (
-            typeof chrome !== "undefined" &&
-            chrome.storage &&
-            chrome.storage.sync
-          ) {
-            chrome.storage.sync.set({ cleanerSettings: currentSettings });
-          }
-        }
-      }
+    if (!typeformBtn) {
+      // No actionable button → hide the card and bail out
+      card.classList.add(HIDDEN_CLASS);
+      return;
+    }
 
-      if (card.hasAttribute("data-mess-fee-injected")) return;
-      card.setAttribute("data-mess-fee-injected", "true");
+    // Button is present → card should be visible unless the user has already
+    // manually marked it as filled via our checkbox.
+    const filledTimestamp = currentSettings["mess-fee-filled-timestamp"];
+    let isFilled = false;
 
-      // Inject a checkbox
-      const checkboxContainer = document.createElement("div");
-      checkboxContainer.style.display = "flex";
-      checkboxContainer.style.alignItems = "center";
-      checkboxContainer.style.position = "absolute";
-      checkboxContainer.style.bottom = "12px";
-      checkboxContainer.style.left = "16px";
-      checkboxContainer.style.zIndex = "999";
-      checkboxContainer.style.background = "white";
-      checkboxContainer.style.padding = "4px 8px";
-      checkboxContainer.style.borderRadius = "4px";
+    if (filledTimestamp) {
+      const daysSince =
+        (Date.now() - new Date(filledTimestamp).getTime()) /
+        (1000 * 60 * 60 * 24);
 
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.id = "mess-fee-filled-checkbox";
-      checkbox.style.marginRight = "8px";
-      checkbox.style.cursor = "pointer";
-      checkbox.style.width = "16px";
-      checkbox.style.height = "16px";
-      checkbox.style.accentColor = "#0080FF";
-      checkbox.checked = isFilled;
-
-      const label = document.createElement("label");
-      label.htmlFor = "mess-fee-filled-checkbox";
-      label.textContent = "Mark as Filled [Scaler++]";
-      label.style.fontSize = "12px";
-      label.style.fontWeight = "600";
-      label.style.cursor = "pointer";
-      label.style.color = "#333";
-
-      checkboxContainer.appendChild(checkbox);
-      checkboxContainer.appendChild(label);
-
-      checkbox.addEventListener("change", async (e) => {
-        if (checkbox.checked) {
-          currentSettings["mess-fee-filled-timestamp"] = Date.now();
-        } else {
-          delete currentSettings["mess-fee-filled-timestamp"];
-        }
-
+      if (daysSince <= 12) {
+        isFilled = true;
+        // Keep hidden to survive React re-renders
+        card.classList.add(HIDDEN_CLASS);
+      } else {
+        // Stale — clear the timestamp so the card shows again next cycle
+        delete currentSettings["mess-fee-filled-timestamp"];
         if (
           typeof chrome !== "undefined" &&
           chrome.storage &&
           chrome.storage.sync
         ) {
-          await chrome.storage.sync.set({ cleanerSettings: currentSettings });
+          chrome.storage.sync.set({ cleanerSettings: currentSettings });
         }
-
-        if (checkbox.checked) {
-          setTimeout(() => {
-            card.classList.add(HIDDEN_CLASS);
-          }, 400);
-        }
-      });
-
-      // Prevent click-through navigation on the container
-      checkboxContainer.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-      });
-
-      checkbox.addEventListener("click", (e) => {
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-      });
-
-      card.style.position = "relative"; // vital for absolute positioning the child
-      card.appendChild(checkboxContainer);
+      }
     }
+
+    // ── Checkbox injection ─────────────────────────────────────────────────
+    if (card.hasAttribute("data-mess-fee-injected")) return;
+    card.setAttribute("data-mess-fee-injected", "true");
+
+    // Inject a "Mark as Filled" checkbox so the user can dismiss the card
+    // early once they've already submitted the form.
+    const checkboxContainer = document.createElement("div");
+    checkboxContainer.style.display = "flex";
+    checkboxContainer.style.alignItems = "center";
+    checkboxContainer.style.position = "absolute";
+    checkboxContainer.style.bottom = "12px";
+    checkboxContainer.style.left = "16px";
+    checkboxContainer.style.zIndex = "999";
+    checkboxContainer.style.background = "white";
+    checkboxContainer.style.padding = "4px 8px";
+    checkboxContainer.style.borderRadius = "4px";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = "mess-fee-filled-checkbox";
+    checkbox.style.marginRight = "8px";
+    checkbox.style.cursor = "pointer";
+    checkbox.style.width = "16px";
+    checkbox.style.height = "16px";
+    checkbox.style.accentColor = "#0080FF";
+    checkbox.checked = isFilled;
+
+    const label = document.createElement("label");
+    label.htmlFor = "mess-fee-filled-checkbox";
+    label.textContent = "Mark as Filled [Scaler++]";
+    label.style.fontSize = "12px";
+    label.style.fontWeight = "600";
+    label.style.cursor = "pointer";
+    label.style.color = "#333";
+
+    checkboxContainer.appendChild(checkbox);
+    checkboxContainer.appendChild(label);
+
+    checkbox.addEventListener("change", async () => {
+      if (checkbox.checked) {
+        currentSettings["mess-fee-filled-timestamp"] = Date.now();
+      } else {
+        delete currentSettings["mess-fee-filled-timestamp"];
+      }
+
+      if (
+        typeof chrome !== "undefined" &&
+        chrome.storage &&
+        chrome.storage.sync
+      ) {
+        await chrome.storage.sync.set({ cleanerSettings: currentSettings });
+      }
+
+      if (checkbox.checked) {
+        setTimeout(() => {
+          card.classList.add(HIDDEN_CLASS);
+        }, 400);
+      }
+    });
+
+    // Prevent click-through navigation on the container
+    checkboxContainer.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    });
+
+    checkbox.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    });
+
+    card.style.position = "relative"; // vital for absolute positioning the child
+    card.appendChild(checkboxContainer);
   });
 }
 
