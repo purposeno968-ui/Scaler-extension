@@ -118,7 +118,9 @@ function restoreSubjectSort() {
 }
 
 function observeSubjectList() {
-  const observer = new MutationObserver((mutations) => {
+  if (window._subjectSortObserver) return; // already watching
+
+  const observer = new MutationObserver(() => {
     if (window.location.href.includes("/core-curriculum")) {
       const container = document.querySelector(".m-l-20.m-r-20.m-t-20");
       if (container) {
@@ -134,6 +136,7 @@ function observeSubjectList() {
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
+  window._subjectSortObserver = observer;
 }
 
 // Global initialization hooked by content.js

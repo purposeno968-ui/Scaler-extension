@@ -1,6 +1,6 @@
 // ============================================
 // features/spotlightSearch.js
-// Ctrl+Space spotlight-style search overlay for Scaler
+// Alt/Option+Space spotlight-style search overlay for Scaler
 // ============================================
 
 (function () {
@@ -9,6 +9,9 @@
   let searchDebounceTimer = null;
   let selectedIndex = -1;
   let allResults = [];
+
+  // AbortController for the in-flight fetch (so we can cancel on close)
+  let searchAbortController = null;
 
   // ── Constants ─────────────────────────────────────────────────────────────
   const SEARCH_API = "https://www.scaler.com/academy/mentee/search-with-query";
@@ -372,7 +375,8 @@
       if (e.target === overlay) closeSpotlight();
     });
 
-    // Input listener
+    // Input listeners — stored on the element, removed automatically when
+    // the overlay is removed from the DOM, so no manual cleanup needed.
     const input = document.getElementById("scaler-spotlight-input");
     input.addEventListener("input", onSearchInput);
     input.addEventListener("keydown", onKeyDown);
@@ -385,9 +389,6 @@
 
     buildSpotlightDOM();
 
-    const overlay = document.getElementById("scaler-spotlight-overlay");
-    if (overlay) overlay.style.display = "flex";
-
     // Focus input immediately
     setTimeout(() => {
       const input = document.getElementById("scaler-spotlight-input");
@@ -399,15 +400,28 @@
     if (!spotlightOpen) return;
     spotlightOpen = false;
 
+    // Cancel any in-flight search request
+    if (searchAbortController) {
+      searchAbortController.abort();
+      searchAbortController = null;
+    }
+
+    // Clear pending debounce timer
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = null;
+
+    // Reset result state — drop element references so the GC can reclaim them
+    allResults = [];
+    selectedIndex = -1;
+
     const overlay = document.getElementById("scaler-spotlight-overlay");
     if (overlay) {
       overlay.style.animation = "spo-fade-in 0.15s ease reverse";
-      setTimeout(() => overlay.remove(), 150);
+      setTimeout(() => {
+        // Re-check: still in the DOM? (Guard against double-close race)
+        if (overlay.parentNode) overlay.remove();
+      }, 150);
     }
-
-    clearTimeout(searchDebounceTimer);
-    allResults = [];
-    selectedIndex = -1;
   }
 
   // ── Keyboard shortcut ─────────────────────────────────────────────────────
@@ -450,7 +464,14 @@
   function onSearchInput(e) {
     const query = e.target.value.trim();
 
+    // Cancel previous in-flight request
+    if (searchAbortController) {
+      searchAbortController.abort();
+      searchAbortController = null;
+    }
+
     clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = null;
     selectedIndex = -1;
     allResults = [];
 
@@ -472,10 +493,15 @@
 
   // ── API call ───────────────────────────────────────────────────────────────
   async function doSearch(query) {
+    // Create a fresh AbortController for this request
+    searchAbortController = new AbortController();
+    const signal = searchAbortController.signal;
+
     try {
       const url = `${SEARCH_API}?q=${encodeURIComponent(query)}`;
       const response = await fetch(url, {
         credentials: "include",
+        signal,
         headers: {
           Accept: "application/json",
           "X-Requested-With": "XMLHttpRequest",
@@ -488,9 +514,13 @@
       showLoading(false);
       renderResults(data);
     } catch (err) {
+      // AbortError is expected when user types quickly — don't show error
+      if (err.name === "AbortError") return;
       showLoading(false);
       showEmpty(true, "Could not reach Scaler. Are you logged in?");
       console.warn("[Scaler++] Spotlight search error:", err);
+    } finally {
+      searchAbortController = null;
     }
   }
 
@@ -527,7 +557,7 @@
 
       items.forEach((item) => {
         const el = makeResultItem(item, type);
-        allResults.push({ el, url: resolveUrl(item) });
+        allResults.push({ el, url: resolveUrl(item, type) });
         fragment.appendChild(el);
       });
     }
@@ -543,12 +573,13 @@
   function makeResultItem(item, type) {
     const el = document.createElement("a");
     el.className = "spo-result-item";
-    el.href = resolveUrl(item);
+    el.href = resolveUrl(item, type) || "#";
     el.target = "_blank";
     el.rel = "noopener noreferrer";
 
-    // Index for keyboard nav
-    el.dataset.spoIndex = allResults.length;
+    // Index for keyboard nav (set after push so the index is stable)
+    const itemIndex = allResults.length;
+    el.dataset.spoIndex = itemIndex;
 
     // Icon
     const iconEmoji =
@@ -593,16 +624,16 @@
       <span class="spo-arrow">›</span>
     `;
 
-    // Mouse hover selection
+    // Mouse hover selection — use index captured at creation time, not from dataset,
+    // to avoid the cost of a parse on every hover.
     el.addEventListener("mouseenter", () => {
-      const idx = parseInt(el.dataset.spoIndex, 10);
-      setSelected(idx);
+      setSelected(itemIndex);
     });
 
     // Click handler
-    el.addEventListener("click", (e) => {
-      e.preventDefault();
-      const href = resolveUrl(item);
+    el.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      const href = resolveUrl(item, type);
       if (href) window.open(href, "_blank", "noopener,noreferrer");
       closeSpotlight();
     });
@@ -642,7 +673,7 @@
   function setSelected(idx) {
     if (allResults.length === 0) return;
 
-    // Clamp
+    // Wrap around
     if (idx < 0) idx = allResults.length - 1;
     if (idx >= allResults.length) idx = 0;
 
@@ -657,9 +688,25 @@
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  function resolveUrl(item) {
+  // ── URL resolver ──────────────────────────────────────────────────────────
+  // For problems we build a canonical URL from sbat_id + problem id to avoid
+  // the messy slug-based URLs returned by the API.
+  //
+  // URL format:
+  //   /academy/mentee-dashboard/class/{sbat_id}/assignment/problems/{id}  (lecture / assignment)
+  //   /academy/mentee-dashboard/class/{sbat_id}/homework/problems/{id}    (homework)
+  function resolveUrl(item, type) {
+    if (type === "problem") {
+      const sbatId = item.sbat_id;
+      const problemId = item.id;
+      if (sbatId && problemId) {
+        // event_type "homework" → homework segment; everything else → assignment
+        const segment = item.event_type === "homework" ? "homework" : "assignment";
+        return `https://www.scaler.com/academy/mentee-dashboard/class/${sbatId}/${segment}/problems/${problemId}`;
+      }
+    }
+    // Classrooms and events: use the API-supplied URL as-is
     if (!item.url) return null;
-    // Relative URLs → absolute
     if (item.url.startsWith("/")) return `https://www.scaler.com${item.url}`;
     return item.url;
   }
@@ -667,7 +714,7 @@
   function clearResults() {
     const container = document.getElementById("scaler-spotlight-results");
     if (!container) return;
-    // Remove all children except empty/loading divs
+    // Remove all children except the static empty/loading placeholders
     [...container.children].forEach((child) => {
       if (
         child.id !== "scaler-spotlight-empty" &&

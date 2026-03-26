@@ -96,6 +96,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         initSubjectSort();
       } else {
         restoreSubjectSort();
+        if (window._subjectSortObserver) {
+          window._subjectSortObserver.disconnect();
+          window._subjectSortObserver = null;
+        }
       }
     } else if (key === "contest-leaderboard") {
       if (value) {
