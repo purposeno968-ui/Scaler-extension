@@ -173,9 +173,9 @@
       /* ── Icon bubble ── */
       .spo-icon-bubble {
         flex-shrink: 0;
-        width: 36px;
-        height: 36px;
-        border-radius: 9px;
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -183,7 +183,7 @@
       }
 
       .spo-icon-bubble.classroom { background: linear-gradient(135deg, #1e6fe8, #6637d6); }
-      .spo-icon-bubble.problem   { background: linear-gradient(135deg, #16a34a, #15803d); }
+      .spo-icon-bubble.problem   { background: linear-gradient(135deg, #92400e, #b45309); }
       .spo-icon-bubble.event     { background: linear-gradient(135deg, #ea580c, #c2410c); }
 
       /* ── Text block ── */
@@ -547,12 +547,12 @@
 
     const fragment = document.createDocumentFragment();
 
-    function makeSection(label, emoji, items, type) {
+    function makeSection(label, items, type) {
       if (items.length === 0) return;
 
       const header = document.createElement("div");
       header.className = "spo-section-header";
-      header.textContent = `${emoji}  ${label}`;
+      header.textContent = label;
       fragment.appendChild(header);
 
       items.forEach((item) => {
@@ -562,9 +562,9 @@
       });
     }
 
-    makeSection("Classrooms", "🎓", classrooms, "classroom");
-    makeSection("Problems", "💡", problems, "problem");
-    makeSection("Events", "📅", events, "event");
+    makeSection("Classrooms", classrooms, "classroom");
+    makeSection("Problems", problems, "problem");
+    makeSection("Events", events, "event");
 
     container.appendChild(fragment);
   }
@@ -581,10 +581,8 @@
     const itemIndex = allResults.length;
     el.dataset.spoIndex = itemIndex;
 
-    // Icon
-    const iconEmoji =
-      type === "classroom" ? "🎓" : type === "problem" ? "💡" : "📅";
-    const iconBubble = `<div class="spo-icon-bubble ${type}">${iconEmoji}</div>`;
+    // Icon bubble — SVG icons matching the user-provided images
+    const iconBubble = `<div class="spo-icon-bubble ${type}">${getTypeIcon(type)}</div>`;
 
     // Subtitle
     let subtitle = item.item_type || "";
@@ -688,6 +686,42 @@
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Type icons (SVG) ───────────────────────────────────────────────────
+  // Returns inline SVG HTML for each result type.
+  function getTypeIcon(type) {
+    const attrs = 'width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"';
+
+    if (type === "classroom") {
+      // Teacher with floating board and pointer (rounded style)
+      return `<svg ${attrs}>
+        <circle cx="6" cy="7" r="2.5" />
+        <path d="M4 22v-4.5a3 3 0 0 1 3-3h1" />
+        <rect x="11" y="4" width="10" height="8" rx="2" />
+        <line x1="14" y1="7" x2="18" y2="7" stroke-width="1.2" />
+        <line x1="14" y1="9" x2="18" y2="9" stroke-width="1.2" />
+        <line x1="7" y1="14.5" x2="14" y2="7.5" stroke-width="2" />
+      </svg>`;
+    }
+
+    if (type === "problem") {
+      // Lightbulb with puzzle piece (yellow tint via stroke override)
+      return `<svg ${attrs.replace('stroke="rgba(255,255,255,0.92)"', 'stroke="#fde047"')}>
+        <path d="M9 21h6M12 3a6 6 0 0 1 4.24 10.24C15.12 14.36 15 15.22 15 16H9c0-.78-.12-1.64-1.24-2.76A6 6 0 0 1 12 3z"/>
+        <path d="M11 16h2"/>
+        <path d="M10.5 10.5 Q12 8.5 13.5 10.5 Q12 12 13.5 13.5" stroke-width="1.5"/>
+      </svg>`;
+    }
+
+    // event — calendar with checkmark
+    return `<svg ${attrs}>
+      <rect x="3" y="4" width="18" height="18" rx="2.5"/>
+      <line x1="16" y1="2" x2="16" y2="6"/>
+      <line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+      <polyline points="9 16 11 18 15 14"/>
+    </svg>`;
+  }
+
   // ── URL resolver ──────────────────────────────────────────────────────────
   // For problems we build a canonical URL from sbat_id + problem id to avoid
   // the messy slug-based URLs returned by the API.
