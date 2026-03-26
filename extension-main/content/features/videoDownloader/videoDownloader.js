@@ -197,6 +197,7 @@ class VideoDownloader {
           payload: {
             url: response.url,
             type: type,
+            title: document.title || "",
           },
         },
         () => {

@@ -46,7 +46,18 @@
       .subtitle {
         color: #71717a;
         font-size: 13px;
-        margin-bottom: 28px;
+        margin-bottom: 16px;
+      }
+      .video-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #d4d4d8;
+        margin-bottom: 20px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        display: none; /* shown by JS only when title exists */
       }
       .mode-badge {
         display: inline-block;
@@ -175,6 +186,8 @@
     <div class="container">
       <div class="logo">Scaler<span>++</span></div>
       <div class="subtitle">Secure Stream Downloader</div>
+
+      <div id="video-title" class="video-title"></div>
 
       <div id="mode-badge" class="mode-badge mode-video">VIDEO</div>
 

@@ -75,59 +75,88 @@ class AudioTranscriber {
   async transcribeRemote(audioBuffer, onProgress) {
     this.log("Uploading chunks to Lemonfox Whisper API...");
 
-    // Lemonfox standard file size limits (~20-25MB max per request)
-    const CHUNK_SIZE = 20 * 1024 * 1024;
+    // Keep chunks well under Lemonfox's limit to avoid 413 errors.
+    // 4 MB per chunk is a safe ceiling (Lemonfox rejects ~10 MB+).
+    const CHUNK_SIZE = 4 * 1024 * 1024; // 4 MB
+    const MAX_RETRIES = 3;
+    const INTER_CHUNK_DELAY_MS = 800; // avoid hammering the API
+
     const totalChunks = Math.ceil(audioBuffer.byteLength / CHUNK_SIZE);
     const transcriptParts = [];
+
+    this.log(
+      `Audio size: ${(audioBuffer.byteLength / 1024 / 1024).toFixed(1)} MB → ${totalChunks} chunk(s)`,
+    );
 
     for (let i = 0; i < totalChunks; i++) {
       const start = i * CHUNK_SIZE;
       const end = Math.min(start + CHUNK_SIZE, audioBuffer.byteLength);
       const chunk = audioBuffer.slice(start, end);
 
-      const blob = new Blob([chunk], { type: "audio/aac" });
-      const file = new File([blob], `audio_chunk_${i}.aac`, {
-        type: "audio/aac",
+      // Use audio/mpeg (.mp3) — matches the audio output format
+      const blob = new Blob([chunk], { type: "audio/mpeg" });
+      const file = new File([blob], `audio_chunk_${i}.mp3`, {
+        type: "audio/mpeg",
       });
 
       const formData = new FormData();
       formData.append("file", file);
       formData.append("model", "whisper-1");
 
-      try {
-        const response = await fetch(
-          // For testing use http://localhost:3000/api/transcribe
-          "https://scalerbackend.vercel.app/api/transcribe",
-          {
-            method: "POST",
-            headers: {
-              Authorization:
-                "Bearer Ritesh-Prajapati-created-started-this-extension-super-secret-key-12345",
+      let success = false;
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const response = await fetch(
+            // For testing use http://localhost:3000/api/transcribe
+            "https://scalerbackend.vercel.app/api/transcribe",
+            {
+              method: "POST",
+              headers: {
+                Authorization:
+                  "Bearer Ritesh-Prajapati-created-started-this-extension-super-secret-key-12345",
+              },
+              body: formData,
             },
-            body: formData,
-          },
+          );
+
+          if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`API Error ${response.status}: ${errText}`);
+          }
+
+          const data = await response.json();
+          if (data && data.text) {
+            transcriptParts.push(data.text.trim());
+          }
+          success = true;
+          break; // success — no more retries needed
+        } catch (err) {
+          this.log(
+            `⚠ Chunk ${i + 1} attempt ${attempt}/${MAX_RETRIES} failed: ${err.message}`,
+          );
+          if (attempt < MAX_RETRIES) {
+            // Exponential back-off: 2s, 4s
+            await new Promise((r) => setTimeout(r, 2000 * attempt));
+          }
+        }
+      }
+
+      if (!success) {
+        this.log(
+          `❌ Chunk ${i + 1} could not be transcribed after ${MAX_RETRIES} attempts. Skipping.`,
         );
-
-        if (!response.ok) {
-          const errText = await response.text();
-          throw new Error(`API Error ${response.status}: ${errText}`);
-        }
-
-        const data = await response.json();
-        if (data && data.text) {
-          transcriptParts.push(data.text.trim());
-        }
-      } catch (err) {
-        this.log(`⚠ Chunk ${i + 1} API failed: ${err.message}`);
       }
 
       const pct = (((i + 1) / totalChunks) * 100).toFixed(1);
       if (onProgress) {
         onProgress(parseFloat(pct), i + 1, totalChunks);
       }
-      this.log(
-        `Transcribed API Chunk: ${i + 1}/${totalChunks} chunks (${pct}%)`,
-      );
+      this.log(`Transcribed API Chunk: ${i + 1}/${totalChunks} (${pct}%)`);
+
+      // Small pause between chunks to avoid rate-limiting
+      if (i < totalChunks - 1) {
+        await new Promise((r) => setTimeout(r, INTER_CHUNK_DELAY_MS));
+      }
     }
 
     let fullText = transcriptParts.join(" ");

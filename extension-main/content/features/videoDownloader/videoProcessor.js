@@ -23,6 +23,14 @@ function log(msg) {
 const urlParams = new URLSearchParams(window.location.search);
 const m3u8Url = urlParams.get("url");
 const downloadType = urlParams.get("type") || "video";
+const videoTitle = urlParams.get("title") || "";
+
+// ── Show video title if available ──
+const titleElem = document.getElementById("video-title");
+if (titleElem && videoTitle) {
+  titleElem.textContent = videoTitle;
+  titleElem.style.display = "block";
+}
 
 if (!m3u8Url) {
   log("Error: No M3U8 URL provided.");
@@ -312,6 +320,19 @@ async function downloadToMemory(segments, audioExtractor) {
 
 // ── Main Download Flow ──
 
+// Derive a clean filename from the video title, falling back to 'Scaler_Lecture'
+function getSuggestedName(ext) {
+  if (videoTitle) {
+    const slug = videoTitle
+      .replace(/[\\/:*?"<>|]/g, "") // strip illegal filename chars
+      .replace(/\s+/g, "_")          // spaces → underscores
+      .substring(0, 80)              // cap length
+      .replace(/_+$/, "");           // trim trailing underscores
+    if (slug) return `${slug}.${ext}`;
+  }
+  return `Scaler_Lecture.${ext}`;
+}
+
 startBtn.addEventListener("click", async () => {
   try {
     startBtn.disabled = true;
@@ -375,13 +396,12 @@ startBtn.addEventListener("click", async () => {
         );
       }
 
-      // Save as .txt using Blob download (showSaveFilePicker fails because
-      // the user gesture expired during the 10-15 min transcription)
+      // Save transcript as .txt
       const blob = new Blob([transcript], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "Scaler_Lecture_Transcript.txt";
+      a.download = getSuggestedName("txt");
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -397,83 +417,73 @@ startBtn.addEventListener("click", async () => {
     }
 
     // ── AUDIO / VIDEO MODE ──
-    const ext = downloadType === "audio" ? "aac" : "mp4";
-    const mimeType = downloadType === "audio" ? "audio/aac" : "video/mp4";
+    // Download everything into memory first, then trigger save — consistent with transcript mode.
+    const ext = downloadType === "audio" ? "mp3" : "mp4";
+    const mimeType = downloadType === "audio" ? "audio/mpeg" : "video/mp4";
     const startTime = Date.now();
 
-    // Prepare audio extractor if needed
     let audioExtractor = null;
     if (downloadType === "audio") {
       audioExtractor = new TSAudioExtractor();
       log("Audio extractor initialized — stripping video from each chunk.");
     }
 
-    // ── Try File System Access API (Chrome, Edge) ──
-    // Brave blocks showSaveFilePicker by default → fall back to Blob download
+    statusText.innerText = `Downloading ${downloadType} (${CONCURRENCY}x parallel)...`;
+    log("Downloading to memory — save dialog will appear after download completes.");
+
+    const memBuffer = await downloadToMemory(segments, audioExtractor);
+    const blob = new Blob([memBuffer], { type: mimeType });
+
+    // ── Try File System Access API after download is complete ──
+    // We attempt showSaveFilePicker here (post-download) so the user picks a
+    // save location *after* seeing 100% progress — same feel as transcript mode.
+    // Brave / Firefox fall through to the blob URL fallback automatically.
     const supportsFilePicker =
       typeof window.showSaveFilePicker === "function" &&
-      !navigator.brave; // navigator.brave is set on Brave browser
+      !navigator.brave;
 
+    let saved = false;
     if (supportsFilePicker) {
-      statusText.innerText = "Choose where to save the file...";
-      let fileHandle;
       try {
-        fileHandle = await window.showSaveFilePicker({
-          suggestedName: `Scaler_Lecture.${ext}`,
+        const fileHandle = await window.showSaveFilePicker({
+          suggestedName: getSuggestedName(ext),
           types: [
             {
-              description:
-                downloadType === "audio" ? "Audio File" : "Video File",
+              description: downloadType === "audio" ? "Audio File" : "Video File",
               accept:
                 downloadType === "audio"
-                  ? { "audio/aac": [".aac", ".m4a"] }
-                  : { "video/mp4": [".mp4", ".ts"] },
+                  ? { "audio/mpeg": [".mp3"] }
+                  : { "video/mp4": [".mp4"] },
             },
           ],
         });
+        const writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        saved = true;
       } catch (err) {
-        // User dismissed the picker — don't treat as an error
         if (err.name === "AbortError") {
           log("File selection cancelled.");
           startBtn.disabled = false;
           statusText.innerText = "Ready to download.";
           return;
         }
-        // Any other error (e.g. Brave blocking it at runtime) → fall through to Blob
+        // Any other error (e.g. Brave blocking) → fall through to blob URL
         log("Save picker unavailable — switching to direct download...");
-      }
-
-      if (fileHandle) {
-        // Streaming write directly to disk
-        const writable = await fileHandle.createWritable();
-        statusText.innerText = `Downloading ${downloadType} (${CONCURRENCY}x parallel)...`;
-        await downloadConcurrently(segments, writable, audioExtractor);
-        await writable.close();
-
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        log(`✅ Download finished in ${elapsed}s!`);
-        statusText.innerText = `🎉 Download Complete! (${elapsed}s)`;
-        progressBar.style.background = "#28a745";
-        return;
       }
     }
 
-    // ── Fallback: Download to memory → Blob URL (Brave / Firefox / any browser) ──
-    log("Using in-memory download (compatible with all browsers)...");
-    statusText.innerText = `Downloading ${downloadType} (${CONCURRENCY}x parallel)...`;
-
-    // Reuse downloadToMemory (already handles audio extraction + progress UI)
-    const memBuffer = await downloadToMemory(segments, audioExtractor);
-    const blob = new Blob([memBuffer], { type: mimeType });
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = `Scaler_Lecture.${ext}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    // Delay revoke so the browser has time to start the download
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    if (!saved) {
+      // Blob URL fallback (Brave, Firefox, or picker unavailable)
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = getSuggestedName(ext);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    }
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     log(`✅ Download triggered in ${elapsed}s! Check your Downloads folder.`);
