@@ -1,3 +1,7 @@
+This feature acts aggressively on existing elements: 
+* replaces the entire video stream instead of modifying existing ones 
+* it does not try to use the existing tokens from current session , instead fetches them freshly by a sequence of api calls from scaler.com  
+
 # Activation Flow
 
 1. **Detection**: Content script monitors for `.agora_video_player` element on page
