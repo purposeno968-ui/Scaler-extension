@@ -51,7 +51,7 @@ Always shows a clickable "View Leaderboard" link on contest pages, even during a
 
 ## 🔍 Global Spotlight Search
 
-Press **`Option / Alt + Space`** to open a floating Apple-style search bar. Instantly find and jump to **Classes**, **Problems**, or **Events** from anywhere on Scaler.
+Press **`Alt + /`** (Option + / on Mac) or click the **Search** button in the Scaler header to open a floating Apple-style search bar. Instantly find and jump to **Classes**, **Problems**, or **Events** from anywhere on Scaler.
 
 ## 🧹 CLEANER DASHBOARD
 

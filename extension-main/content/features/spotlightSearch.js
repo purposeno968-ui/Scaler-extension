@@ -340,7 +340,7 @@
             autocomplete="off"
             spellcheck="false"
           />
-          <span id="scaler-spotlight-shortcut-hint">Opt/Alt + Space</span>
+          <span id="scaler-spotlight-shortcut-hint">Alt + /</span>
         </div>
 
         <div id="scaler-spotlight-results">
@@ -425,14 +425,13 @@
   }
 
   // ── Keyboard shortcut ─────────────────────────────────────────────────────
-  // Standardized to Alt/Option + Space for all platforms to avoid macOS
-  // Ctrl+Space conflicts.
+  // Alt + / (Option + / on Mac) — avoids conflicts with system shortcuts.
   window.addEventListener(
     "keydown",
     (e) => {
-      const isAltSpace = e.altKey && !e.metaKey && e.code === "Space";
+      const isAltSlash = e.altKey && !e.metaKey && e.code === "Slash";
 
-      if (isAltSpace) {
+      if (isAltSlash) {
         // Check if feature is enabled
         const isEnabled =
           typeof currentSettings !== "undefined" &&
@@ -459,6 +458,20 @@
     },
     true,
   );
+
+  // ── Header button custom event ─────────────────────────────────────────
+  // The header Search button dispatches this event to open the spotlight.
+  window.addEventListener("scaler-spotlight-open", () => {
+    const isEnabled =
+      typeof currentSettings === "undefined" ||
+      currentSettings["spotlight-search"] !== false;
+    if (!isEnabled) return;
+    if (spotlightOpen) {
+      closeSpotlight();
+    } else {
+      openSpotlight();
+    }
+  });
 
   // ── Search input handling ─────────────────────────────────────────────────
   function onSearchInput(e) {
@@ -689,7 +702,8 @@
   // ── Type icons (SVG) ───────────────────────────────────────────────────
   // Returns inline SVG HTML for each result type.
   function getTypeIcon(type) {
-    const attrs = 'width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"';
+    const attrs =
+      'width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"';
 
     if (type === "classroom") {
       // Teacher with floating board and pointer (rounded style)
@@ -735,7 +749,8 @@
       const problemId = item.id;
       if (sbatId && problemId) {
         // event_type "homework" → homework segment; everything else → assignment
-        const segment = item.event_type === "homework" ? "homework" : "assignment";
+        const segment =
+          item.event_type === "homework" ? "homework" : "assignment";
         return `https://www.scaler.com/academy/mentee-dashboard/class/${sbatId}/${segment}/problems/${problemId}`;
       }
     }

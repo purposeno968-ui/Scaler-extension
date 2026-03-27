@@ -175,36 +175,6 @@ function autoCloseReferralModals() {
     }
   });
 }
-
-/**
- * Add Core-Curriculum link to the h2 element
- */
-function addCoreCurriculumLink() {
-  const h2 = document.querySelector(".section-header__title");
-  if (!h2) return;
-
-  // Skip if already has the link
-  if (h2.querySelector('a[href*="core-curriculum"]')) return;
-
-  const anchor = document.createElement("a");
-  anchor.href =
-    "https://www.scaler.com/academy/mentee-dashboard/core-curriculum/m/";
-  anchor.textContent = "Core-Curriculum";
-  anchor.style.marginLeft = "10px";
-  anchor.style.color = "#5865F2";
-  anchor.style.textDecoration = "none";
-  anchor.style.fontSize = "0.8em";
-  anchor.style.fontWeight = "normal";
-  anchor.setAttribute(CLEANER_ATTR, "core-curriculum");
-
-  // Apply visibility based on settings
-  if (!shouldHide("core-curriculum")) {
-    anchor.classList.add(HIDDEN_CLASS);
-  }
-
-  h2.appendChild(anchor);
-}
-
 /**
  * Helper function to append the curriculum icon to a container
  */
@@ -233,6 +203,60 @@ function appendCurriculumIcon(container) {
 }
 
 /**
+ * Append the Spotlight Search button to the header (next to the curriculum icon).
+ * Clicking it opens the spotlight; keyboard shortcut is Alt+/.
+ */
+function appendSpotlightButton(container) {
+  if (container.querySelector("#scaler-spotlight-header-btn")) return;
+
+  const btn = document.createElement("button");
+  btn.id = "scaler-spotlight-header-btn";
+  btn.title = "Spotlight Search (Alt + /)";
+  btn.setAttribute("aria-label", "Open Spotlight Search");
+  btn.innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2.2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+  `;
+
+  // Inline styles — mirrors Scaler's own header button aesthetics
+  Object.assign(btn.style, {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "4px 10px",
+    border: "2px solid rgba(255,255,255,0.18)",
+    borderRadius: "8px",
+    background: "rgba(255, 255, 255, 1)",
+    fontSize: "20px",
+    fontWeight: "500",
+    cursor: "pointer",
+    lineHeight: "1",
+    transition: "background 0.15s, color 0.15s",
+    verticalAlign: "middle",
+  });
+
+  btn.addEventListener("mouseenter", () => {
+    btn.style.background = "rgba(255,255,255,0.16)";
+  });
+  btn.addEventListener("mouseleave", () => {
+    btn.style.background = "rgba(255, 255, 255, 1)";
+  });
+
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (typeof window.initSpotlightSearch === "function") {
+      window.initSpotlightSearch();
+    }
+    window.dispatchEvent(new CustomEvent("scaler-spotlight-open"));
+  });
+
+  container.appendChild(btn);
+}
+
+/**
  * Add Core-Curriculum icon link to the header container
  */
 function addCoreCurriculumIconLink() {
@@ -240,6 +264,7 @@ function addCoreCurriculumIconLink() {
 
   if (container) {
     appendCurriculumIcon(container);
+    appendSpotlightButton(container);
   } else {
     setTimeout(() => {
       const containerXPath =
@@ -247,6 +272,7 @@ function addCoreCurriculumIconLink() {
       const xpathContainer = getElementByXPath(containerXPath);
       if (xpathContainer) {
         appendCurriculumIcon(xpathContainer);
+        appendSpotlightButton(xpathContainer);
       }
     }, 2000);
   }
@@ -387,7 +413,6 @@ function injectMessFeeCheckbox() {
 function cleanupTodosPage() {
   if (!isTodosPage()) return;
   processElementsByConfig(TODOS_PAGE_SELECTORS);
-  addCoreCurriculumLink(); // This adds curriculum link to the sidebar H2 (todos page only)
   injectMessFeeCheckbox(); // Safely inject the mess fee checkbox
 }
 

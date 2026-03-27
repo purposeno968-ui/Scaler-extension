@@ -4,7 +4,7 @@
 
 // Bump this number whenever new fields are added to the payload.
 // All existing users will automatically re-sync on next page load.
-const SYNC_VERSION = 2;
+const SYNC_VERSION = 3;
 
 function initUsernameTracker() {
   if (typeof chrome === "undefined" || !chrome.runtime?.id) return;
@@ -12,13 +12,25 @@ function initUsernameTracker() {
   // To force a re-sync during dev, uncomment:
   // chrome.storage.sync.remove("scaler_sync_version");
 
-  chrome.storage.sync.get(["scaler_sync_version"], (result) => {
+  // Always fetch both version AND user so we can ping on every load
+  chrome.storage.sync.get(["scaler_sync_version", "scaler_user"], (result) => {
     if (chrome.runtime.lastError || !chrome.runtime?.id) return;
-    // Only skip if the stored version matches the current schema version
+
+    // Always ping if we have a stored email — regardless of sync version
+    if (result?.scaler_user?.email) {
+      pingUser(result.scaler_user.email);
+    }
+
+    // Only skip full profile sync if version already matches
     if (result?.scaler_sync_version === SYNC_VERSION) return;
 
     fetchAndSyncUser();
   });
+}
+
+function pingUser(email) {
+  if (!chrome.runtime?.id) return;
+  chrome.runtime.sendMessage({ action: "pingUser", email });
 }
 
 function fetchAndSyncUser() {
@@ -66,6 +78,7 @@ function fetchAndSyncUser() {
         role: role ?? null,
         country: country ?? null,
         avatar_file_name: currentUser?.avatar_file_name ?? null,
+        phone_number: currentUser?.phone_number ?? null,
 
         // from /performance-stats/
         cgr_score: perf?.cgrScore ?? null,
@@ -83,6 +96,8 @@ function fetchAndSyncUser() {
                 email: user.email,
               },
             });
+            // Also ping immediately after sync
+            pingUser(user.email);
           }
         },
       );

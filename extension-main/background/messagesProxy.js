@@ -44,6 +44,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  // ── Ping user activity (Last Seen) ──────────────────────────
+  // Fire-and-forget — same pattern as /api/messages/active.
+  // No sendResponse needed; the content script doesn't await a reply.
+  if (message.action === "pingUser") {
+    fetch(`${BACKEND_BASE_URL}/api/users/ping`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: message.email }),
+    }).catch(() => { /* fail silently */ });
+
+    // No return true — we're not sending a response
+  }
+
+  // ── Track download usage (video / audio / transcript) ────────
+  // Fire-and-forget — increments the counter in Supabase.
+  if (message.action === "trackDownload") {
+    fetch(`${BACKEND_BASE_URL}/api/users/download`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: message.email, type: message.downloadType }),
+    }).catch(() => { /* fail silently */ });
+
+    // No return true — fire-and-forget
+  }
+
+
+
   // ── Proxy button click to backend ────────────────────────
   // Content scripts can't make cross-origin requests to our
   // backend, so we relay them through the service worker.
