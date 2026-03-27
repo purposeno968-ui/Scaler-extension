@@ -12,6 +12,7 @@ class LiveStreamRecorder {
         // Recording
         this.mediaRecorder = null;
         this.recordedChunks = [];
+        this.recordedSize = 0;  // Track size incrementally to avoid memory leak
         this.recordingStartTime = 0;
         
         // State
@@ -446,11 +447,12 @@ class LiveStreamRecorder {
         };
         document.body.appendChild(sdkScript);
 
-        // Listen for events from the bridge
-        window.addEventListener("scaler-stream-event", (e) => {
+        // Listen for events from the bridge - store reference for cleanup
+        this.bridgeEventHandler = (e) => {
             const { type, data } = e.detail;
             this.handleBridgeEvent(type, data);
-        });
+        };
+        window.addEventListener("scaler-stream-event", this.bridgeEventHandler);
     }
 
     handleBridgeEvent(type, data) {
@@ -481,6 +483,7 @@ class LiveStreamRecorder {
                 break;
             case "chunk-available":
                 this.recordedChunks.push(data.blob);
+                this.recordedSize += data.size;  // Track size incrementally
                 break;
             case "layout-update":
                 // Camera feed is now handled in recorderBridge.js -> sidebar container
@@ -729,11 +732,11 @@ class LiveStreamRecorder {
     updateUI() {
         if (!this.isActive) return;
 
-        // Update buffer size
+        // Update buffer size using tracked size (no new Blob creation)
         const bufferSize = this.getElement('bufferSize');
-        if (bufferSize && this.recordedChunks.length > 0) {
-            const size = new Blob(this.recordedChunks).size / 1024 / 1024;
-            bufferSize.textContent = `${size.toFixed(1)} MB`;
+        if (bufferSize) {
+            const sizeMB = this.recordedSize / 1024 / 1024;
+            bufferSize.textContent = `${sizeMB.toFixed(1)} MB`;
         }
 
         // Update timeline based on mode
@@ -837,10 +840,15 @@ class LiveStreamRecorder {
         if (streamsLayout) streamsLayout.style.display = "";
 
         // Remove scripts and event listeners
-        const script = document.getElementById("scaler-agora-bridge");
+        const script = document.getElementById("scaler-recorder-bridge-script");
         if (script) script.remove();
         
         document.removeEventListener('keydown', this.keydownHandler);
+        
+        // Remove bridge event listener
+        if (this.bridgeEventHandler) {
+            window.removeEventListener("scaler-stream-event", this.bridgeEventHandler);
+        }
         
         // Command bridge to cleanup
         this.sendCommand("cleanup");
